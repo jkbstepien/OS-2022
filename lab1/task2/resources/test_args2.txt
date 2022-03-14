@@ -1,0 +1,5 @@
+create_table 100 \
+wc_files "./resources/big_test1 ./resources/big_test1 ./resources/big_test1" \
+wc_files "./resources/big_test1 ./resources/big_test2 ./resources/big_test3" \
+wc_files "./resources/big_test2 ./resources/big_test3 ./resources/big_test3" \
+remove_block 1
