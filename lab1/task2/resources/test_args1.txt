@@ -1,2 +1,0 @@
-create_table 1
-wc_files ./resources/small_test1

@@ -1,33 +1,7 @@
-#CC = gcc
-#CFLAGS = -g -Wall
-#
-#all: static shared
-#
-#static:
-#	$(CC) $(CFLAGS) -c library.c -o library.o
-#	ar rcs liblibrary.a library.o
-#	$(CC) $(CFLAGS) -o main main.c library.o
-#
-#shared: _shared
-#	$(CC) $(CFLAGS) -o main main.c library.o
-#
-#_shared:
-#	$(CC) $(CFLAGS) -fPIC -c library.c -o library.o
-#	$(CC) $(CFLAGS) -shared -o liblibrary.so library.o
-#
-#dynamic: _shared
-#	$(CC) main.c -o main -L. -ldl -D dynamic
-#
-#clean:
-#	rm -rf *.o *.a *.so main report2.txt
-#
-#test1:
-#	@./main createArray 4 wcFiles "small1.txt small2.txt" saveTmpIntoArray removeBlock 0
-
 CC = gcc
 CFLAGS = -Wall -std=c11
 
-all: static reports clean
+all: static reports
 
 static:
 	$(CC) $(CFLAGS) -c mylib.c
@@ -36,11 +10,22 @@ static:
 	$(CC) $(CFLAGS) main.o libmylib.a -o main
 
 reports: static
-	@printf "small_test\n" >> report2.txt
-	@./main `cat ./resources/test_args1.txt | tr '\n' ' '` >> report2.txt
+	@printf "TEST_1:\n" >> report2.txt
 
-	@printf "medium_test\n" >> report2.txt
-	@./main `cat ./resources/test_args2.txt | tr '\n' ' '` >> report2.txt
+	@./main start_timer create_table 1 wc_files "./resources/small_test1 ./resources/small_test2" \
+	load_block_to_table remove_block 0 end_timer
+
+	@printf "\nTEST_2:\n" >> report2.txt
+
+	@./main start_timer create_table 2 wc_files "./resources/medium_test1" \
+	load_block_to_table wc_files "./resources/medium_test1" load_block_to_table remove_block 1 end_timer
+
+	@printf "\nTEST_3\n" >> report2.txt
+
+	@./main start_timer create_table 4 wc_files "./resources/big_test1 ./resources/big_test2 ./resources/big_test3" \
+	load_block_to_table remove_block 0 wc_files "./resources/big_test1 ./resources/big_test1 ./resources/big_test1" \
+	load_block_to_table wc_files "./resources/big_test1 ./resources/big_test2 ./resources/big_test3" \
+	load_block_to_table remove_block 1 end_timer
 
 clean:
 	rm -f main tmp report2.txt *.o *.a *.so

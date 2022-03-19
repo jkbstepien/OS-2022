@@ -1,15 +1,9 @@
-#ifndef TASK1_MYLIB_H
-#define TASK1_MYLIB_H
+#ifndef LAB1_OS_2022_MYLIB_H
+#define LAB1_OS_2022_MYLIB_H
 
 void create_table(int size);
-void free_table();
+void wc_files(char* file_desc);
+int load_block_to_table();
+void remove_block(int index);
 
-void count_elements();
-long get_file_size(FILE* fd);
-int get_empty_block_index();
-
-void create_block();
-int load_block();
-void free_block();
-
-#endif //TASK1_MYLIB_H
+#endif //LAB1_OS_2022_MYLIB_H
