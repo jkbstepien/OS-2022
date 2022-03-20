@@ -22,11 +22,11 @@ int main(int argc, char** argv) {
         printf("Incorrect number of arguments. There are too many!");
     }
     else {
-        if (argc < 3) {
+        if (argc == 1) {
             // If arguments are lacking - prompt user to fill them.
             printf("Files you want to process:\n");
-            scanf("%start", buffer_in);
-            scanf("%start", buffer_out);
+            scanf("%s", buffer_in);
+            scanf("%s", buffer_out);
         }
         else {
             strcpy(buffer_in, argv[1]);
@@ -68,6 +68,10 @@ int main(int argc, char** argv) {
         print_time(time_file);
 
         fclose(time_file);
+
+        // Freeing memory.
+        free(buffer_in);
+        free(buffer_out);
     
     return 0;
 }
