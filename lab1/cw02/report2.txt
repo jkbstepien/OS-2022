@@ -1,0 +1,43 @@
+TEST_1:
+create_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0100s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+remove_block 
+	real 0.0000s sys 0.0000s user 0.0000s
+
+TEST_2:
+create_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0000s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0000s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+remove_block 
+	real 0.0000s sys 0.0000s user 0.0000s
+
+TEST_3
+create_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0000s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+remove_block 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0000s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+wc_files 
+	real 0.0000s sys 0.0000s user 0.0000s
+load_block_to_table 
+	real 0.0000s sys 0.0000s user 0.0000s
+remove_block 
+	real 0.0000s sys 0.0000s user 0.0000s
