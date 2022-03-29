@@ -6,6 +6,32 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+void dig_in(char* dirpath, char* pattern, int depth, int current_depth);
+
+int main(int argc, char** argv) {
+    
+    if (argc != 4) {
+        printf("Incorrect number of arguments! Expected 3 arguments.");
+        exit(1);
+    }
+    if (atoi(argv[3]) < 0) {
+        printf("Recursion depth can not have negative value!");
+        exit(1);
+    }
+
+    char* dir_begin = argv[1];
+    char* pattern = argv[2];
+    int depth = atoi(argv[3]);
+    int current_depth = 0;
+
+    if (fork() == 0) {
+        dig_in(dir_begin, pattern, depth, current_depth);
+        exit(0);
+    }
+
+    return 0;
+}
+
 void dig_in(char* dirpath, char* pattern, int depth, int current_depth) {
     
     char current_path[1000];
@@ -32,10 +58,10 @@ void dig_in(char* dirpath, char* pattern, int depth, int current_depth) {
         if (strstr(dir_file -> d_name, ".txt")) {
             FILE* file = fopen(current_path, "r");
             
-            char* buffer = calloc(1000, sizeof(char));
             fseek(file, 0, SEEK_END);
             long file_size = ftell(file);
             rewind(file);
+            char* buffer = calloc(file_size, sizeof(char));
 
             fread(buffer, sizeof(char), file_size, file);
 
@@ -56,28 +82,4 @@ void dig_in(char* dirpath, char* pattern, int depth, int current_depth) {
         }
     }
     closedir(dir);
-}
-
-int main(int argc, char** argv) {
-    
-    if (argc != 4) {
-        printf("Incorrect number of arguments! Expected 3 arguments.");
-        exit(1);
-    }
-    if (atoi(argv[3]) < 0) {
-        printf("Recursion depth can not have negative value!");
-        exit(1);
-    }
-
-    char* dir_begin = argv[1];
-    char* pattern = argv[2];
-    int depth = atoi(argv[3]);
-    int current_depth = 0;
-
-    if (fork() == 0) {
-        dig_in(dir_begin, pattern, depth, current_depth);
-        exit(0);
-    }
-
-    return 0;
 }
