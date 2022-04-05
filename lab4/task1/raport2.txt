@@ -1,0 +1,4 @@
+Używając fork potomek dziedziczy: ignorowanie, chwytanie oraz maskowanie.
+Potomek nie dziedziczy sygnałów oczekujących.
+
+Używając exec potomek dziedziczy: ignorowanie, maskowanie i sygnały oczekujące.
