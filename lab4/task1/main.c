@@ -33,11 +33,15 @@ int main(int argc, char** argv) {
 		sigprocmask(SIG_BLOCK, &blocked_signals, NULL);
 		raise(SIGUSR1);
 
-		if (strcmp(argv[1], "pending") == 0) {
-			sigset_t c_signals;
-			sigpending(&c_signals);
-			printf("PENDING - SIGUSR1 in parent: %s\n", sigismember(&c_signals, SIGUSR1) ? "yes" : "no");
-		}
+		sigset_t c_signals;
+		sigpending(&c_signals);
+		printf("PENDING - SIGUSR1 in parent: %s\n", sigismember(&c_signals, SIGUSR1) ? "yes" : "no");
+
+		// if (strcmp(argv[1], "pending") == 0) {
+		// 	sigset_t c_signals;
+		// 	sigpending(&c_signals);
+		// 	printf("PENDING - SIGUSR1 in parent: %s\n", sigismember(&c_signals, SIGUSR1) ? "yes" : "no");
+		// }
     }
 
     if (strcmp(argv[2], "exec") == 0) {
