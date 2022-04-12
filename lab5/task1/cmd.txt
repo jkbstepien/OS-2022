@@ -1,0 +1,7 @@
+element1 = cat /etc/passwd | wc
+element2 = ls | grep '^a'
+element3 = grep 11
+
+element1 | element3
+element1 | element2 | element3
+element2
