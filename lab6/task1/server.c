@@ -19,9 +19,9 @@ void service_END();
 
 void service_LIST(int cID);
 
-void service_2ONE(message_buffer *messageBuffer);
-
 void service_2ALL(message_buffer *messageBuffer);
+
+void service_2ONE(message_buffer *messageBuffer);
 
 void store_message_logs(message_buffer *messageBuffer);
 
@@ -45,19 +45,19 @@ int main() {
                 service_INIT(pMessageBuffer);
                 break;
             case LIST:
-                service_LIST(pMessageBuffer->client_id);
+                service_LIST(pMessageBuffer->clientID);
                 store_message_logs(pMessageBuffer);
                 break;
-            case TO_ONE:
-                service_2ONE(pMessageBuffer);
-                store_message_logs(pMessageBuffer);
-                break;
-            case TO_ALL:
+            case TOALL:
                 service_2ALL(pMessageBuffer);
                 store_message_logs(pMessageBuffer);
                 break;
+            case TOONE:
+                service_2ONE(pMessageBuffer);
+                store_message_logs(pMessageBuffer);
+                break;
             case STOP:
-                service_STOP(pMessageBuffer->client_id);
+                service_STOP(pMessageBuffer->clientID);
                 store_message_logs(pMessageBuffer);
                 break;
             default:
@@ -73,9 +73,9 @@ void service_INIT(message_buffer *messageBuffer) {
 
     // Check if client limit had been reached or process normally for INIT.
     if (cQueues[first_available_ID] != -1 && first_available_ID == MAX_NO_CLIENTS - 1) {
-        messageBuffer->client_id = -1;
+        messageBuffer->clientID = -1;
     } else {
-        messageBuffer->client_id = first_available_ID;
+        messageBuffer->clientID = first_available_ID;
         cQueues[first_available_ID] = messageBuffer->queue_key;
 
         if (first_available_ID < MAX_NO_CLIENTS - 1) {
@@ -128,18 +128,18 @@ void service_LIST(int cID) {
     msgsnd(cQueueID, pMessageBuffer, MSG_SIZE, 0);
 }
 
-void service_2ONE(message_buffer *messageBuffer) {
-    int otherQueueID = msgget(cQueues[messageBuffer->other_id], 0);
-    msgsnd(otherQueueID, messageBuffer, MSG_SIZE, 0);
-}
-
 void service_2ALL(message_buffer *messageBuffer) {
     for (int i = 0; i < MAX_NO_CLIENTS; i++) {
-        if (cQueues[i] != -1 && i != messageBuffer->client_id) {
+        if (cQueues[i] != -1 && i != messageBuffer->clientID) {
             int otherQueueID = msgget(cQueues[i], 0);
             msgsnd(otherQueueID, messageBuffer, MSG_SIZE, 0);
         }
     }
+}
+
+void service_2ONE(message_buffer *messageBuffer) {
+    int otherQueueID = msgget(cQueues[messageBuffer->otherID], 0);
+    msgsnd(otherQueueID, messageBuffer, MSG_SIZE, 0);
 }
 
 void store_message_logs(message_buffer *messageBuffer) {
@@ -149,25 +149,25 @@ void store_message_logs(message_buffer *messageBuffer) {
 
     switch (messageBuffer->message_type) {
         case INIT:
-            if (messageBuffer->client_id == -1) {
+            if (messageBuffer->clientID == -1) {
                 fprintf(result_file, "(INIT) Max number of clients is reached!\n");
             } else {
-                fprintf(result_file, "(INIT) Client ID: %d\n", messageBuffer->client_id);
+                fprintf(result_file, "(INIT) Client ID: %d\n", messageBuffer->clientID);
             }
             break;
         case LIST:
-            fprintf(result_file, "(LIST) Client ID: %d\n", messageBuffer->client_id);
+            fprintf(result_file, "(LIST) Client ID: %d\n", messageBuffer->clientID);
             break;
-        case TO_ONE:
+        case TOALL:
             fprintf(result_file, "Message: %s\n", messageBuffer->message_content);
-            fprintf(result_file, "(2ONE) Sender ID: %d, Receiver ID %d\n", messageBuffer->client_id, messageBuffer->other_id);
+            fprintf(result_file, "(2ALL) Client ID: %d\n", messageBuffer->clientID);
             break;
-        case TO_ALL:
+        case TOONE:
             fprintf(result_file, "Message: %s\n", messageBuffer->message_content);
-            fprintf(result_file, "(2ALL) Client ID: %d\n", messageBuffer->client_id);
+            fprintf(result_file, "(2ONE) Sender ID: %d, Receiver ID %d\n", messageBuffer->clientID, messageBuffer->otherID);
             break;
         case STOP:
-            fprintf(result_file, "(STOP) Client ID: %d\n", messageBuffer->client_id);
+            fprintf(result_file, "(STOP) Client ID: %d\n", messageBuffer->clientID);
             break;
     }
 

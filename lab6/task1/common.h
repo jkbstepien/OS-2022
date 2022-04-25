@@ -17,8 +17,8 @@
 // Necessary structures and enum types
 typedef struct message_buffer {
     key_t queue_key;
-    int client_id;
-    int other_id;
+    int clientID;
+    int otherID;
     long message_type;
     char message_content[MAX_SIZE_MESSAGE];
     struct tm ltimestruct;
@@ -27,8 +27,8 @@ typedef struct message_buffer {
 typedef enum message_type {
     INIT = 1,
     LIST = 2,
-    TO_ONE = 3,
-    TO_ALL = 4,
+    TOONE = 3,
+    TOALL = 4,
     STOP = 5
 } message_type;
 

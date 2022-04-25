@@ -20,9 +20,9 @@ void handle_server_message();
 
 void manage_LIST();
 
-void manage_2ONE(int otherID, char *message);
-
 void manage_2ALL(char *message);
+
+void manage_2ONE(int otherID, char *message);
 
 int main() {
     srand(time(NULL));
@@ -35,9 +35,9 @@ int main() {
 
     signal(SIGINT, manage_stop);
 
-    char *command = NULL;
     size_t len = 0;
     ssize_t read;
+    char *command = NULL;
 
     while (1) {
         printf("User command: ");
@@ -59,10 +59,10 @@ int main() {
             manage_2ALL(message);
         } else if (strcmp(curr_cmd, "2ONE") == 0) {
             curr_cmd = strtok(NULL, " ");
-            int id_to_send = atoi(curr_cmd);
+            int destinationID = atoi(curr_cmd);
             curr_cmd = strtok(NULL, " ");
             char *message = curr_cmd;
-            manage_2ONE(id_to_send, message);
+            manage_2ONE(destinationID, message);
         } else if (strcmp(curr_cmd, "STOP") == 0) {
             manage_stop();
         } else {
@@ -82,7 +82,7 @@ int manage_init() {
     msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
     msgrcv(qID, pMessageBuffer, MSG_SIZE, 0, 0);
 
-    int client_id = pMessageBuffer->client_id;
+    int client_id = pMessageBuffer->clientID;
     if (client_id == -1) {
         printf("Client limit had been reached, leaving..\n");
         exit(0);
@@ -97,24 +97,11 @@ void manage_LIST() {
 
     pMessageBuffer->ltimestruct = *localtime(&my_time);
     pMessageBuffer->message_type = LIST;
-    pMessageBuffer->client_id = client_id;
+    pMessageBuffer->clientID = client_id;
 
     msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
     msgrcv(qID, pMessageBuffer, MSG_SIZE, 0, 0);
     printf("%s\n", pMessageBuffer->message_content);
-}
-
-void manage_2ONE(int otherID, char *message) {
-    time_t my_time = time(NULL);
-    message_buffer *pMessageBuffer = malloc(sizeof(message_buffer));
-
-    pMessageBuffer->ltimestruct = *localtime(&my_time);
-    pMessageBuffer->message_type = TO_ONE;
-    strcpy(pMessageBuffer->message_content, message);
-
-    pMessageBuffer->client_id = client_id;
-    pMessageBuffer->other_id = otherID;
-    msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
 }
 
 void manage_2ALL(char *message) {
@@ -122,10 +109,23 @@ void manage_2ALL(char *message) {
     message_buffer *pMessageBuffer = malloc(sizeof(message_buffer));
 
     pMessageBuffer->ltimestruct = *localtime(&my_time);
-    pMessageBuffer->message_type = TO_ALL;
+    pMessageBuffer->message_type = TOALL;
     strcpy(pMessageBuffer->message_content, message);
 
-    pMessageBuffer->client_id = client_id;
+    pMessageBuffer->clientID = client_id;
+    msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
+}
+
+void manage_2ONE(int otherID, char *message) {
+    time_t my_time = time(NULL);
+    message_buffer *pMessageBuffer = malloc(sizeof(message_buffer));
+
+    pMessageBuffer->ltimestruct = *localtime(&my_time);
+    pMessageBuffer->message_type = TOONE;
+    strcpy(pMessageBuffer->message_content, message);
+
+    pMessageBuffer->clientID = client_id;
+    pMessageBuffer->otherID = otherID;
     msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
 }
 
@@ -135,7 +135,7 @@ void manage_stop() {
 
     pMessageBuffer->ltimestruct = *localtime(&my_time);
     pMessageBuffer->message_type = STOP;
-    pMessageBuffer->client_id = client_id;
+    pMessageBuffer->clientID = client_id;
 
     msgsnd(squeueID, pMessageBuffer, MSG_SIZE, 0);
     msgctl(qID, IPC_RMID, NULL);
@@ -151,7 +151,7 @@ void handle_server_message() {
         } else {
             struct tm my_time = msg_rcv->ltimestruct;
             printf("Msg from: %d has been sent at %02d:%02d:%02d:\n%s\n",
-                   msg_rcv->client_id,
+                   msg_rcv->clientID,
                    my_time.tm_hour,
                    my_time.tm_min,
                    my_time.tm_sec,
