@@ -1,0 +1,60 @@
+
+option: blocks
+threads: 1
+	thread no. 0 - 430.000000
+total: 702.000000
+
+
+option: numbers
+threads: 1
+	thread no. 0 - 561.000000
+total: 815.000000
+
+
+option: blocks
+threads: 2
+	thread no. 0 - 258.000000
+	thread no. 1 - 240.000000
+total: 605.000000
+
+
+option: numbers
+threads: 2
+	thread no. 0 - 784.000000
+	thread no. 1 - 547.000000
+total: 965.000000
+
+
+option: blocks
+threads: 3
+	thread no. 0 - 192.000000
+	thread no. 1 - 168.000000
+	thread no. 2 - 193.000000
+total: 637.000000
+
+
+option: numbers
+threads: 3
+	thread no. 0 - 633.000000
+	thread no. 1 - 603.000000
+	thread no. 2 - 546.000000
+total: 1007.000000
+
+
+option: blocks
+threads: 4
+	thread no. 0 - 141.000000
+	thread no. 1 - 141.000000
+	thread no. 2 - 134.000000
+	thread no. 3 - 142.000000
+total: 631.000000
+
+
+option: numbers
+threads: 4
+	thread no. 0 - 753.000000
+	thread no. 1 - 683.000000
+	thread no. 2 - 755.000000
+	thread no. 3 - 483.000000
+total: 901.000000
+
