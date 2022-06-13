@@ -8,7 +8,7 @@
 #include <string.h>
 #include <poll.h>
 
-#define MAX_MESSAGE_LENGTH 256
+#define MAX_MESSAGE_LENGTH 512
 
 typedef struct Client {
     char name[32];
@@ -28,9 +28,8 @@ char *username;
 int socket_server;
 
 void message_send(int file_desc, char *buffer);
-char *message_receive(int file_desc);
+char *message_receive(int f_desc);
 void end_game_session();
-void server_listener();
 void player_turn();
 int validate_player_move(int move_number);
 void validate_game_status();
@@ -49,7 +48,7 @@ int main(int argc, char **argv) {
     username = argv[1];
     if (strcmp(argv[2], "network") == 0) {
         if ((socket_server = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-            perror("Cannot create network socket");
+            perror("Error while creating network socket :(");
             exit(1);
         }
 
@@ -59,12 +58,12 @@ int main(int argc, char **argv) {
         addr.sin_addr.s_addr = htobe32(INADDR_LOOPBACK);
 
         if (connect(socket_server, (const struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1) {
-            perror("Cannot connect");
+            perror("Error while connecting :(");
             exit(1);
         }
     } else if (strcmp(argv[2], "local") == 0) {
         if ((socket_server = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-            perror("Cannot create local socket");
+            perror("Error while creating local socket :(");
             exit(1);
         }
 
@@ -73,7 +72,7 @@ int main(int argc, char **argv) {
         strcpy(addr.sun_path, argv[3]);
 
         if (connect(socket_server, (const struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1) {
-            perror("Cannot connect");
+            perror("Error while connecting :(");
             exit(1);
         }
     } else {
@@ -84,57 +83,61 @@ int main(int argc, char **argv) {
     printf("Connection to the server established.\n");
 
     // Register user on the server.
-    char buf[MAX_MESSAGE_LENGTH];
-    sprintf(buf, "register %s", username);
-    message_send(socket_server, buf);
+    char b[MAX_MESSAGE_LENGTH];
+    sprintf(b, "register %s", username);
+    message_send(socket_server, b);
 
     // Server listen.
-    struct pollfd *fd = calloc(1, sizeof(struct pollfd));
-    fd->fd = socket_server;
-    fd->events = POLLIN;
-    fd->revents = 0;
+    struct pollfd *pPollfd = calloc(1, sizeof(struct pollfd));
+
+    pPollfd->fd = socket_server;
+    pPollfd->events = POLLIN;
+    pPollfd->revents = 0;
 
     while (1) {
-        poll(fd, 1, -1);
-        char *buf = message_receive(socket_server);
-        char *cmd = strtok(buf, " ");
-        if (strcmp(cmd, "add") == 0) {
-            printf("Registration success\n");
-        } else if (strcmp(cmd, "ping") == 0) {
+        poll(pPollfd, 1, -1);
+
+        char *buffer = message_receive(socket_server);
+        char *command = strtok(buffer, " ");
+
+        if (strcmp(command, "add") == 0) {
+            printf("Successfully registered user.\n");
+        } else if (strcmp(command, "ping") == 0) {
             message_send(socket_server, "ping");
-        } else if (strcmp(cmd, "no_opponent") == 0) {
-            printf("Waiting for opponent...\n");
-        } else if (strcmp(cmd, "name_taken") == 0) {
-            printf("Name already taken\n");
+        } else if (strcmp(command, "name_taken") == 0) {
+            printf("Username taken! Try another.\n");
             shutdown(socket_server, SHUT_RDWR);
             close(socket_server);
             exit(0);
-        } else if (strcmp(cmd, "X") == 0) {
-            printf("My symbol X\n");
-            player1_sign = 'X';
-            player2_sign = 'O';
-        } else if (strcmp(cmd, "O") == 0) {
-            printf("My symbol O\n");
-            player1_sign = 'O';
-            player2_sign = 'X';
-            draw_board();
-            player_turn();
-        } else if (strcmp(cmd, "player_turn") == 0) {
+        } else if (strcmp(command, "no_opponent") == 0) {
+            printf("Waiting for opponent to join the game..\n");
+        } else if (strcmp(command, "player_turn") == 0) {
             int m = atoi(strtok(NULL, " "));
             player2_moves[player2_no_moves] = m;
             player2_no_moves++;
             draw_board();
+            printf("\n");
             player_turn();
-        } else if (strcmp(cmd, "lose") == 0) {
-            printf("You lose!\n");
+        } else if (strcmp(command, "X") == 0) {
+            printf("\nYou play with: X\n");
+            player1_sign = 'X';
+            player2_sign = 'O';
+        } else if (strcmp(command, "O") == 0) {
+            printf("\nYou play with: O\n");
+            player1_sign = 'O';
+            player2_sign = 'X';
+            draw_board();
+            player_turn();
+        } else if (strcmp(command, "win") == 0) {
+            printf("Victory!\n");
             sleep(1);
             end_game_session();
-        } else if (strcmp(cmd, "draw") == 0) {
-            printf("It's a draw\n");
+        } else if (strcmp(command, "lose") == 0) {
+            printf("Loss!\n");
             sleep(1);
             end_game_session();
-        } else if (strcmp(cmd, "win") == 0) {
-            printf("You won!\n");
+        } else if (strcmp(command, "draw") == 0) {
+            printf("Draw.\n");
             sleep(1);
             end_game_session();
         }
@@ -164,20 +167,21 @@ void end_game_session() {
 }
 
 void player_turn() {
-    int m;
+    int move_no;
     do {
-        printf("Your player_turn: ");
-        scanf("%d", &m);
-    } while (!validate_player_move(m));
+        printf("Chosen move: ");
+        scanf("%d", &move_no);
+    } while (!validate_player_move(move_no));
 
-    player1_moves[player1_no_moves] = m;
+    player1_moves[player1_no_moves] = move_no;
     player1_no_moves++;
+
     draw_board();
     validate_game_status();
 
-    char buf[MAX_MESSAGE_LENGTH];
-    sprintf(buf, "player_turn %d", m);
-    message_send(socket_server, buf);
+    char buffer[MAX_MESSAGE_LENGTH];
+    sprintf(buffer, "player_turn %d", move_no);
+    message_send(socket_server, buffer);
 
 }
 
@@ -187,72 +191,97 @@ int validate_player_move(int move_number) {
             return 0;
         }
     }
+
     for (int i = 0; i < player2_no_moves; ++i) {
         if (player2_moves[i] == move_number) {
             return 0;
         }
     }
+
     return 1;
 }
 
 void validate_game_status() {
-    char symbol = get_game_result();
+    char sign = get_game_result();
 
-    if (symbol != ' ') {
+    if (sign != ' ') {
         message_send(socket_server, "win");
     }
+
     if (player1_no_moves + player2_no_moves == 9) {
         message_send(socket_server, "draw");
     }
 }
 
 char get_game_result() {
-    char board[3][3];
+    char b[3][3];
+
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            board[i][j] = ' ';
+            b[i][j] = ' ';
         }
     }
+
     for (int i = 0; i < player1_no_moves; i++) {
-        int m = player1_moves[i] - 1;
-        board[m / 3][m % 3] = player1_sign;
+        int move_no = player1_moves[i] - 1;
+        b[move_no / 3][move_no % 3] = player1_sign;
     }
-    for (int i = 0; i < player2_no_moves; i++) {
-        int m = player2_moves[i] - 1;
-        board[m / 3][m % 3] = player2_sign;
-    }
-    for (int i = 0; i < 3; i++) {
-        if (board[i][0] == board[i][1] && board[i][0] == board[i][2] && board[i][0] != ' ') {
-            return board[i][0];
 
-        } else if (board[0][i] == board[1][i] && board[0][i] == board[2][i] && board[0][i] != ' ') {
-            return board[0][i];
+    for (int i = 0; i < player2_no_moves; i++) {
+        int move_no = player2_moves[i] - 1;
+        b[move_no / 3][move_no % 3] = player2_sign;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        if (b[i][0] == b[i][1]
+        && b[i][0] == b[i][2]
+        && b[i][0] != ' ') {
+            return b[i][0];
+
+        } else if (b[0][i] == b[1][i]
+        && b[0][i] == b[2][i]
+        && b[0][i] != ' ') {
+            return b[0][i];
         }
     }
 
-    if (board[0][0] == board[1][1] && board[0][0] == board[2][2] && board[0][0] != ' ') {
-        return board[0][0];
+    if (b[0][0] == b[1][1]
+    && b[0][0] == b[2][2]
+    && b[0][0] != ' ') {
+        return b[0][0];
     }
-    if (board[0][2] == board[1][1] && board[0][2] == board[2][0] && board[0][2] != ' ') {
-        return board[0][2];
+
+    if (b[0][2] == b[1][1]
+    && b[0][2] == b[2][0]
+    && b[0][2] != ' ') {
+        return b[0][2];
     }
+
     return ' ';
 }
 
 void draw_board() {
-    char board[3][3];
-    for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) board[i][j] = ' ';
-    for (int i = 0; i < player1_no_moves; i++) {
-        int m = player1_moves[i] - 1;
-        board[m / 3][m % 3] = player1_sign;
-    }
-    for (int i = 0; i < player2_no_moves; i++) {
-        int m = player2_moves[i] - 1;
-        board[m / 3][m % 3] = player2_sign;
-    }
+    char b[3][3];
+
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            printf("|%c", board[i][j]);
+            b[i][j] = ' ';
+        }
+    }
+
+    for (int i = 0; i < player1_no_moves; i++) {
+        int move_no = player1_moves[i] - 1;
+        b[move_no / 3][move_no % 3] = player1_sign;
+    }
+
+    for (int i = 0; i < player2_no_moves; i++) {
+        int move_no = player2_moves[i] - 1;
+        b[move_no / 3][move_no % 3] = player2_sign;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            printf("|%c", b[i][j]);
         }
         printf("|\n");
     }
