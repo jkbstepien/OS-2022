@@ -11,190 +11,28 @@
 #define MAX_NUMBER_OF_PLAYERS 12
 #define MAX_MESSAGE_LENGTH 256
 
+char *message_receive(int fd) {
+    char *buf = calloc(MAX_MESSAGE_LENGTH, sizeof(char));
+    if (read(fd, buf, MAX_MESSAGE_LENGTH) == -1) {
+        perror("Cannot receive message");
+        exit(1);
+    }
+    return buf;
+}
+
+void message_send(int fd, char *buf) {
+    if (write(fd, buf, MAX_MESSAGE_LENGTH) == -1) {
+        perror("Cannot send message");
+        exit(1);
+    }
+}
+
 typedef struct Client {
     char name[32];
     int socket;
     int available;
     int opponent;
 } client_t;
-
-// Client.
-int socket_server;
-
-// Server.
-int socket_local;
-int socket_network;
-int no_clients;
-
-char *user_name;
-
-char player1_sign;
-char player2_sign;
-
-int player1_moves[9];
-int player1_moves_count = 0;
-int player2_moves[9];
-int player2_moves_count = 0;
-
-int validate_player_move(int move_number);
-
-void get_current_game_status();
-
-char game_result();
-
-void draw_board();
-
-void get_error_info(char *e) {
-    perror(e);
-    exit(1);
-}
-
-void end_session_handler() {
-    printf("Client signed out, sending info to server..\n");
-    if (write(socket_server, "end", MAX_MESSAGE_LENGTH) == -1) {
-        get_error_info("Cannot send message");
-    }
-    exit(0);
-}
-
-void send_message(int fd, char *buffer) {
-    if (write(fd, buffer, MAX_MESSAGE_LENGTH) == -1) {
-        get_error_info("Message not sent :(");
-    }
-}
-
-void draw_board() {
-    char b[3][3];
-
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            b[i][j] = ' ';
-        }
-    }
-
-    for (int i = 0; i < player1_moves_count; i++) {
-        int m = player1_moves[i] - 1;
-        b[m / 3][m % 3] = player1_sign;
-    }
-
-    for (int i = 0; i < player2_moves_count; i++) {
-        int m = player2_moves[i] - 1;
-        b[m / 3][m % 3] = player2_sign;
-    }
-
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            printf("|%c", b[i][j]);
-        }
-        printf("|\n");
-    }
-}
-
-void player_turn() {
-    int move_no;
-
-    do {
-        printf("Pick move: ");
-        scanf("%d", &move_no);
-    } while (!validate_player_move(move_no));
-
-    player1_moves[player1_moves_count] = move_no;
-    player1_moves_count++;
-
-    draw_board();
-    get_current_game_status();
-
-    char buf[MAX_MESSAGE_LENGTH];
-    sprintf(buf, "player_turn %d", move_no);
-    send_message(socket_server, buf);
-
-}
-
-int validate_player_move(int move_number) {
-
-    for (int i = 0; i < player1_moves_count; ++i) {
-        if (player1_moves[i] == move_number) {
-            return 0;
-        }
-    }
-
-    for (int i = 0; i < player2_moves_count; ++i) {
-        if (player2_moves[i] == move_number) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-void get_current_game_status() {
-    char sign = game_result();
-
-    if (sign != ' ') {
-        send_message(socket_server, "win");
-    }
-    if (player1_moves_count + player2_moves_count == 9) {
-        send_message(socket_server, "draw");
-    }
-}
-
-char game_result() {
-    char b[3][3];
-
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            b[i][j] = ' ';
-        }
-    }
-
-    for (int i = 0; i < player1_moves_count; i++) {
-        int m = player1_moves[i] - 1;
-        b[m / 3][m % 3] = player1_sign;
-    }
-
-    for (int i = 0; i < player2_moves_count; i++) {
-        int m = player2_moves[i] - 1;
-        b[m / 3][m % 3] = player2_sign;
-    }
-
-    for (int i = 0; i < 3; i++) {
-        if (b[i][0] == b[i][1]
-            && b[i][0] == b[i][2]
-            && b[i][0] != ' ') {
-            return b[i][0];
-
-        } else if (b[0][i] == b[1][i]
-                   && b[0][i] == b[2][i]
-                   && b[0][i] != ' ') {
-            return b[0][i];
-        }
-    }
-
-    if (b[0][0] == b[1][1]
-        && b[0][0] == b[2][2]
-        && b[0][0] != ' ') {
-        return b[0][0];
-    }
-    if (b[0][2] == b[1][1]
-        && b[0][2] == b[2][0]
-        && b[0][2] != ' ') {
-        return b[0][2];
-    }
-    return ' ';
-}
-
-void error(char *msg) {
-    perror(msg);
-    exit(1);
-}
-
-
-
-void sendMsg(int fd, char *buf) {
-    if (write(fd, buf, MAX_MESSAGE_LENGTH) == -1) {
-        error("Cannot send message");
-    }
-}
 
 int localSocket;
 int networkSocket;
@@ -231,7 +69,8 @@ int getClient(int fd);
 int main(int argc, char *argv[]) {
     srand(time(NULL));
     if (argc != 3) {
-        error("Wrong number of arguments: <port> <pathname>");
+        perror("Wrong number of arguments: <port> <pathname>");
+        exit(1);
     }
     setupNetworkSocket(argv[1]);
     setupLocalSocket(argv[2]);
@@ -245,10 +84,7 @@ void serverListen() {
     pthread_create(&thread, NULL, &pingRoutine, NULL);
     while (1) {
         int fd = monitorClients();
-        char *buf = calloc(MAX_MESSAGE_LENGTH, sizeof(char));
-        if (read(fd, buf, MAX_MESSAGE_LENGTH) == -1) {
-            error("Cannot receive message");
-        }
+        char *buf = message_receive(fd);
         char *cmd = strtok(buf, " ");
 //        printf("cmd: %s\n", cmd);
         pthread_mutex_lock(&mutex);
@@ -257,27 +93,27 @@ void serverListen() {
             int res = addClient(arg, fd);
             switch (res) {
                 case -1:
-                    sendMsg(fd, "name_taken");
+                    message_send(fd, "name_taken");
                     break;
                 case 0:
-                    sendMsg(fd, "add");
+                    message_send(fd, "add");
                     addOpponent(fd);
                     break;
             }
-        } else if (strcmp(cmd, "move") == 0) {
+        } else if (strcmp(cmd, "player_turn") == 0) {
             int i = getClient(fd);
             char *move = strtok(NULL, " ");
             char buf[MAX_MESSAGE_LENGTH];
-            sprintf(buf, "move %s", move);
-            sendMsg(clients[i].opponent, buf);
+            sprintf(buf, "player_turn %s", move);
+            message_send(clients[i].opponent, buf);
         } else if (strcmp(cmd, "win") == 0) {
             int i = getClient(fd);
-            sendMsg(clients[i].opponent, "lose");
-            sendMsg(fd, "win");
+            message_send(clients[i].opponent, "lose");
+            message_send(fd, "win");
         } else if (strcmp(cmd, "draw") == 0) {
             int i = getClient(fd);
-            sendMsg(clients[i].opponent, "draw");
-            sendMsg(fd, "draw");
+            message_send(clients[i].opponent, "draw");
+            message_send(fd, "draw");
         } else if (strcmp(cmd, "ping") == 0) {
             makeAvailable(fd);
         } else if (strcmp(cmd, "end") == 0) {
@@ -309,12 +145,12 @@ void *pingRoutine(void *) {
         removeUnavailableClients();
         for (int i = 0; i < clientsCount; ++i) {
             if (clients[i].available) {
-                sendMsg(clients[i].socket, "ping");
+                message_send(clients[i].socket, "ping");
                 clients[i].available = 0;
             }
         }
         pthread_mutex_unlock(&mutex);
-        sleep(15);
+        sleep(10);
     }
 }
 
@@ -322,7 +158,7 @@ void removeUnavailableClients() {
     for (int i = 0; i < clientsCount; ++i) {
         if (!clients[i].available) {
             if (i < clientsCount - 1) {
-                sendMsg(clients[i].socket, "end");
+                message_send(clients[i].socket, "end");
                 clients[i] = clients[clientsCount - 1];
             }
             clientsCount--;
@@ -355,17 +191,17 @@ void addOpponent(int fd) {
             clients[clientsCount - 1].opponent = clients[i].socket;
 
             if (getRandom() % 2 == 0) {
-                sendMsg(fd, "O");
-                sendMsg(clients[i].socket, "X");
+                message_send(fd, "O");
+                message_send(clients[i].socket, "X");
             } else {
-                sendMsg(fd, "X");
-                sendMsg(clients[i].socket, "O");
+                message_send(fd, "X");
+                message_send(clients[i].socket, "O");
             }
             break;
         }
     }
     if (!opponentFound) {
-        sendMsg(fd, "no_opponent");
+        message_send(fd, "no_opponent");
     }
 }
 
@@ -387,7 +223,7 @@ int addClient(char *name, int socket) {
 
     clients[clientsCount] = *client;
     clientsCount++;
-//    printf("%s registered\n", user_name);
+//    printf("%s registered\n", username);
     return 0;
 }
 
@@ -425,7 +261,8 @@ int monitorClients() {
 
 void setupLocalSocket(char *path) {
     if ((localSocket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        error("Cannot create local socket");
+        perror("Cannot create local socket");
+        exit(1);
     }
 
     struct sockaddr_un addr;
@@ -434,17 +271,20 @@ void setupLocalSocket(char *path) {
     unlink(path);
 
     if (bind(localSocket, (const struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1) {
-        error("Cannot bind");
+        perror("Cannot bind");
+        exit(1);
     }
 
     if (listen(localSocket, MAX_NUMBER_OF_PLAYERS) == -1) {
-        error("Cannot listen");
+        perror("Cannot listen");
+        exit(1);
     }
 }
 
 void setupNetworkSocket(char *port) {
     if ((networkSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        error("Cannot create network socket");
+        perror("Cannot create network socket");
+        exit(1);
     }
 
     struct sockaddr_in addr;
@@ -453,10 +293,12 @@ void setupNetworkSocket(char *port) {
     addr.sin_addr.s_addr = htobe32(INADDR_LOOPBACK);
 
     if (bind(networkSocket, (const struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1) {
-        error("Cannot bind");
+        perror("Cannot bind");
+        exit(1);
     }
 
     if (listen(networkSocket, MAX_NUMBER_OF_PLAYERS) == -1) {
-        error("Cannot listen");
+        perror("Cannot listen");
+        exit(1);
     }
 }
